@@ -1,0 +1,26 @@
+{
+    "agente": "ag001",
+    "fechahoraUTC":   "2020-10-02T19:00:03",
+    "lecturas": [
+        {
+          "sensor":"sid001",
+          "lectura": 16.5
+        },
+        {
+          "sensor":"sid002",
+          "lectura": 1.08
+        },
+        {
+          "sensor":"sid003",
+          "lectura": 37
+        },
+        {
+          "sensor":"sid004",
+          "lectura": 26.98
+        },
+        {
+          "sensor":"sid005",
+          "lectura": 8957
+        }
+      ]
+  }

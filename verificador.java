@@ -44,7 +44,7 @@ public class verificador {
 
             if (listOfFiles[i].isFile()) {
 
-                System.out.println("- " + listOfFiles[i].getName());
+                System.out.println("\n- " + listOfFiles[i].getName());
 
                 String extension = listOfFiles[i].getName().substring(listOfFiles[i].getName().length() - 5);
 
@@ -75,6 +75,8 @@ public class verificador {
                             Path temp = Files.move(Paths.get(listOfFiles[i].getAbsolutePath()),
                                     Paths.get("./borrados/" + listOfFiles[i].getName()));
 
+                            System.out.println("------- El archivo ha sido borrado correctamente");
+
                         } catch (IOException e) {
 
                             e.printStackTrace();
@@ -91,9 +93,19 @@ public class verificador {
 
                     System.out.println("--- El archivo es JSON pero no es un reporte de sensor");
                 }
+
             } else if (listOfFiles[i].isDirectory()) {
                 // System.out.println("Directory " + listOfFiles[i].getName());
             }
+        }
+
+        System.out.println("\n----------------------");
+        System.out.println("\n Se ha procesado la carpeta de lecturas correctamente, buscando cambios en 10 segundos");
+        try {
+            TimeUnit.SECONDS.sleep(10);
+            checkSensorDataFolder();
+        } catch (Exception ex) {
+            System.out.println(ex);
         }
 
         // Checks sensor data
@@ -133,7 +145,15 @@ public class verificador {
             // Se cierra el puerto
             s.close();
 
+            System.out.println("----- El archivo fue enviado al reportero correctamente.");
+
             addSentDataToHistory(filename);
+            try {
+                TimeUnit.SECONDS.sleep(1);
+                checkSensorDataFolder();
+            } catch (Exception ex) {
+                System.out.println(ex);
+            }
 
         } catch (Exception e) {
 
@@ -142,9 +162,9 @@ public class verificador {
             try {
                 TimeUnit.SECONDS.sleep(3);
             } catch (Exception ex) {
-                System.out.println(e);
+                System.out.println(ex);
             }
-            ;
+
             sendSensorData(filename);
             return false;
 
@@ -176,6 +196,7 @@ public class verificador {
 
     }
 
+
     public static void parseSensorData(JSONObject sensorDataJSON) {
 
         String agente = (String) sensorDataJSON.get("agente");
@@ -183,24 +204,30 @@ public class verificador {
         System.out.println(agente);
         System.out.println(fechahoraUTC);
 
-        JSONArray the_json_array = (JSONArray) sensorDataJSON.get("lecturas");
+        JSONArray lecturasArray = (JSONArray) sensorDataJSON.get("lecturas");
 
-        for (int i = 0; i < the_json_array.size(); i++) {
-            System.out.println(the_json_array.get(i));
+        for (int i = 0; i < lecturasArray.size(); i++) {
+            System.out.println(lecturasArray.get(i));
         }
     }
 
+
+    // Esta funcion recibe la ubicacion del JSON y retorna un JSONObject
     public static JSONObject readJSON(String url) {
-        // JSON parser object to parse read file
+        
+        // JSON parser para crear el JSON a partir del archivo leido
         JSONParser jsonParser = new JSONParser();
 
         try (FileReader reader = new FileReader(url)) {
-            // Read JSON file
+            // Se lee el archivo JSON
             Object obj = jsonParser.parse(reader);
 
-            // JSONArray JSONsensor = (JSONArray) obj;
+           
+            // se crea un JSONObject con el resultado del parser
             JSONObject response = (JSONObject) obj;
-            // System.out.println(response);
+           
+
+            // Se retorna el JSONObject 
             return response;
 
         } catch (FileNotFoundException e) {

@@ -12,6 +12,7 @@ import java.io.IOException;
 
 import java.io.*;
 import java.net.*;
+import java.util.Iterator;
 
 // Esta clase utilizara el Servidor que recibira los numeros
 public class reportero {
@@ -29,14 +30,16 @@ public class reportero {
         try {
             // Se crea un ServerSocket para esperar los mensajes
             ServerSocket ss = new ServerSocket(puerto);
-            System.out.println("Esperando a recibir mensaje en el puerto: 9999");
+            System.out.println("Esperando a recibir mensaje en el puerto: 9999\n");
             Socket s = ss.accept();
 
             // Se crea un data inputStream que espera el numero de parte del cliente
             DataInputStream dis = new DataInputStream(s.getInputStream());
 
             String encodedJSON = (String) dis.readUTF();
+           
             System.out.println(encodedJSON);
+            System.out.println("Mensaje JSON recibido, procediendo al unmarshalling\n");
 
             readSensorData(encodedJSON);
             // Se cierra el puerto del servidor
@@ -59,19 +62,27 @@ public class reportero {
         JSONParser parser = new JSONParser();
         String agentId;
         JSONObject sensorData;
+        String time;
 
         try {
+
             sensorData = (JSONObject) parser.parse(encodedJSON);
             agentId = sensorData.get("agente").toString();
+            time = sensorData.get("fechahoraUTC").toString();
+
+            JSONArray lecturas = (JSONArray) sensorData.get("lecturas");
+
+            String nombreSensor;
+            double lecturaValor;
            
-            System.out.println(sensorData.get("lecturas"));
 
-            // loop de todos los sensores de lecturas
+            for (int i = 0; i < lecturas.size(); i++) {
+                JSONObject itemObj = (JSONObject) lecturas.get(i);
+                nombreSensor = (String) itemObj.get("sensor");
+                lecturaValor =((Number) itemObj.get("lectura")).doubleValue();
 
-            // updateSensorLog(agentId, sensorId)
-
-
-
+                updateSensorLog(agentId, nombreSensor, lecturaValor, time);
+            }
 
         } catch (ParseException e) {
             e.printStackTrace();
@@ -79,29 +90,105 @@ public class reportero {
 
     }
 
-    public static void updateSensorLog(String agentId, String sensorId){
+    public static void updateSensorLog(String agentId, String sensorId, double sensorValue, String time) {
 
-        // Busca si existe JSON con el Id del Agente y Sensor
-        // Si no existe crear uno
+        JSONObject sensorLog;
 
-        // comparar el valor si es un nuevo minimo o maximo
-        // agregar valor a la lista de valores
-        // calcular el nuevo valor medio
+        String filename = agentId + "-" + sensorId + ".json";
 
-        // guardar JSON
+        File f = new File("./registros/" + filename);
+        if (f.exists() && !f.isDirectory()) {
 
-        // sensorData.put("agente",agentId)
-        // sensorData.put("sensor",sensorId)
-        // sensorData.put("lectura_min",)
-        // sensorData.put("lectura_max","")
-        // sensorData.put("lectura_med","")
-        // sensorData.put("lecturas","")
+            System.out.println("Se econtro el registro del sensor: " + sensorId + " del agente: " + agentId);
+            System.out.println("Ingresando el nuevo valor de lectura: " + sensorValue);
 
-        // una ves actualizado, mostrar el cambio en consola
+            sensorLog = readJSON("./registros/" + agentId + "-" + sensorId + ".json");
 
+            double logMin = (double) sensorLog.get("lectura_min");
+            double logMax = (double) sensorLog.get("lectura_max");
+
+            if (sensorValue < logMin) {
+                logMin = sensorValue;
+            }
+            if (sensorValue > logMax) {
+                logMax = sensorValue;
+            }
+
+           
+
+            
+
+            JSONArray sensorLogArray = (JSONArray) sensorLog.get("lecturas");
+
+            JSONObject lectureObj = new JSONObject();
+            lectureObj.put("fechahoraUTC", time);
+            lectureObj.put("lectura", sensorValue);
+
+            sensorLogArray.add(lectureObj);
+            
+
+            double logMed = 0;
+
+            for (int i = 0; i < sensorLogArray.size(); i++) {
+                System.out.println(((JSONObject)sensorLogArray.get(i)).get("lectura"));
+                logMed +=((Number) ((JSONObject)sensorLogArray.get(i)).get("lectura")).doubleValue();
+            }
+
+            logMed = logMed / sensorLogArray.size();
+
+            sensorLog.put("lectura_max", logMax);
+            sensorLog.put("lectura_min", logMin);
+            sensorLog.put("lectura_med", logMed);
+
+            sensorLog.put("lecturas", sensorLogArray);
+
+        } else {
+
+            System.out.println("No existe el registro del sensor: " + sensorId + " del agente: " + agentId);
+
+            // create file
+
+            sensorLog = new JSONObject();
+
+            sensorLog.put("agente", agentId);
+            sensorLog.put("sensor", sensorId);
+            sensorLog.put("lectura_min", sensorValue);
+            sensorLog.put("lectura_max", sensorValue);
+            sensorLog.put("lectura_med", sensorValue);
+
+            JSONArray sensorLogArray = new JSONArray();
+
+            JSONObject lectureObj = new JSONObject();
+            lectureObj.put("fechahoraUTC", time);
+            lectureObj.put("lectura", sensorValue);
+
+            sensorLogArray.add(lectureObj);
+            sensorLog.put("lecturas", sensorLogArray);
+
+    
+        }
+
+        try (FileWriter file = new FileWriter("registros/" + filename)) {
+
+            file.write(sensorLog.toJSONString());
+            file.flush();
+
+            System.out.println("--- Se ha actualizado el registro exitosamente");
+            System.out.println(
+                "Cambios: Agente: " + agentId + 
+                ", Sensor: " + sensorId + 
+                ", Minima: "+sensorLog.get("lectura_min")+
+                ", Maxima: "+sensorLog.get("lectura_max")+
+                ", Media: "+sensorLog.get("lectura_med")
+                );
+
+        } catch (IOException e) {
+
+            e.printStackTrace();
+
+        }
 
     }
-
 
     public static JSONObject readJSON(String url) {
         // JSON parser object to parse read file

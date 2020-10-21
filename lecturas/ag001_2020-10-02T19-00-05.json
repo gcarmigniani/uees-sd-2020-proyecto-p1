@@ -17,10 +17,6 @@
         {
           "sensor":"sid004",
           "lectura": 52.21
-        },
-        {
-          "sensor":"sid005",
-          "lectura": 2987
         }
       ]
   }
